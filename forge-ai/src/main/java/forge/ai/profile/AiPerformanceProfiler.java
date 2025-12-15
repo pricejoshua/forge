@@ -7,27 +7,37 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Lightweight profiler for AI performance bottlenecks.
- * 
+ *
  * Usage:
  * 1. Run with -DAiProfiling=true JVM argument
  * 2. Play a game or run AI simulations
  * 3. Call AiPerformanceProfiler.printStats() to see results
- * 
+ *
  * Example output shows operations sorted by total time descending,
  * helping identify the biggest performance bottlenecks.
  */
-public class AiPerformanceProfiler {
+public final class AiPerformanceProfiler {
     private static final boolean ENABLED = Boolean.getBoolean("AiProfiling");
-    private static final ConcurrentHashMap<String, OperationStats> stats = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, OperationStats> STATS =
+            new ConcurrentHashMap<>();
 
     /**
-     * Statistics for a single operation
+     * Private constructor to prevent instantiation.
      */
-    private static class OperationStats {
+    private AiPerformanceProfiler() {
+        throw new UnsupportedOperationException("Utility class");
+    }
+
+    /**
+     * Statistics for a single operation.
+     */
+    private static final class OperationStats {
+        /** Count of calls to this operation. */
         private final AtomicLong callCount = new AtomicLong(0);
+        /** Total time spent in this operation. */
         private final AtomicLong totalTimeNanos = new AtomicLong(0);
 
-        void record(long nanos) {
+        void record(final long nanos) {
             callCount.incrementAndGet();
             totalTimeNanos.addAndGet(nanos);
         }
@@ -47,14 +57,16 @@ public class AiPerformanceProfiler {
     }
 
     /**
-     * AutoCloseable profiler for a single operation
+     * AutoCloseable profiler for a single operation.
      */
     private static class ProfileScope implements AutoCloseable {
-        private final String operation;
+        /** Name of the operation being profiled. */
+        private final String operationName;
+        /** Start time of the operation. */
         private final long startTime;
 
-        ProfileScope(String operation) {
-            this.operation = operation;
+        ProfileScope(final String operation) {
+            this.operationName = operation;
             this.startTime = System.nanoTime();
         }
 
@@ -62,15 +74,17 @@ public class AiPerformanceProfiler {
         public void close() {
             try {
                 long elapsed = System.nanoTime() - startTime;
-                stats.computeIfAbsent(operation, k -> new OperationStats()).record(elapsed);
+                STATS.computeIfAbsent(operationName,
+                        k -> new OperationStats()).record(elapsed);
             } catch (Exception e) {
-                // Swallow exceptions - profiling should never break game logic
+                // Swallow exceptions - profiling should never break
+                // game logic
             }
         }
     }
 
     /**
-     * No-op profiler used when profiling is disabled
+     * No-op profiler used when profiling is disabled.
      */
     private static class NoOpProfileScope implements AutoCloseable {
         @Override
@@ -83,25 +97,26 @@ public class AiPerformanceProfiler {
 
     /**
      * Start profiling an operation. Use with try-with-resources.
-     * 
+     *
      * @param operation the name of the operation being profiled
      * @return an AutoCloseable that records the operation time when closed
      */
-    public static AutoCloseable profile(String operation) {
+    public static AutoCloseable profile(final String operation) {
         if (!ENABLED) {
             return NO_OP;
         }
         try {
             return new ProfileScope(operation);
         } catch (Exception e) {
-            // If profiler creation fails, return no-op to avoid breaking game logic
+            // If profiler creation fails, return no-op to avoid breaking
+            // game logic
             return NO_OP;
         }
     }
 
     /**
-     * Check if profiling is currently enabled
-     * 
+     * Check if profiling is currently enabled.
+     *
      * @return true if profiling is enabled, false otherwise
      */
     public static boolean isEnabled() {
@@ -113,15 +128,16 @@ public class AiPerformanceProfiler {
      * Operations are sorted by total time descending.
      */
     public static void printStats() {
-        if (!ENABLED || stats.isEmpty()) {
+        if (!ENABLED || STATS.isEmpty()) {
             return;
         }
 
         System.out.println("=== AI Performance Profile ===");
-        
-        stats.entrySet().stream()
+
+        STATS.entrySet().stream()
             .sorted(Map.Entry.comparingByValue(
-                Comparator.comparingLong(OperationStats::getTotalTimeNanos).reversed()
+                Comparator.comparingLong(
+                        OperationStats::getTotalTimeNanos).reversed()
             ))
             .forEach(entry -> {
                 String operation = entry.getKey();
@@ -129,20 +145,21 @@ public class AiPerformanceProfiler {
                 long calls = opStats.getCallCount();
                 long avgNanos = opStats.getAverageTimeNanos();
                 long totalNanos = opStats.getTotalTimeNanos();
-                
+
                 // Convert to milliseconds for display
-                long avgMs = avgNanos / 1_000_000;
-                long totalMs = totalNanos / 1_000_000;
-                
+                final long nanosPerMilli = 1_000_000;
+                long avgMs = avgNanos / nanosPerMilli;
+                long totalMs = totalNanos / nanosPerMilli;
+
                 System.out.printf("%s: %d calls, avg %dms, total %dms%n",
                     operation, calls, avgMs, totalMs);
             });
     }
 
     /**
-     * Clear all statistics
+     * Clear all statistics.
      */
     public static void reset() {
-        stats.clear();
+        STATS.clear();
     }
 }
