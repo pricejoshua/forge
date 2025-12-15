@@ -7,6 +7,7 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import forge.StaticData;
+import forge.ai.profile.AiPerformanceProfiler;
 import forge.ai.simulation.GameStateEvaluator;
 import forge.card.mana.ManaCost;
 import forge.game.card.*;
@@ -564,7 +565,12 @@ public class ComputerUtilCard {
      * @return a int.
      */
     public static int evaluateCreature(final Card c) {
-        return creatureEvaluator.evaluateCreature(c);
+        try (AutoCloseable p = AiPerformanceProfiler.profile("ComputerUtilCard.evaluateCreature")) {
+            return creatureEvaluator.evaluateCreature(c);
+        } catch (Exception e) {
+            // Profiler exceptions shouldn't affect game logic
+            return creatureEvaluator.evaluateCreature(c);
+        }
     }
     public static int evaluateCreature(final Card c, final boolean considerPT, final boolean considerCMC) {
         return creatureEvaluator.evaluateCreature(c, considerPT, considerCMC);
@@ -1771,6 +1777,15 @@ public class ComputerUtilCard {
      * @param exclude list of cards to exclude when considering ability sources, accepts null
      */
     public static void applyStaticContPT(final Game game, Card vCard, final CardCollectionView exclude) {
+        try (AutoCloseable p = AiPerformanceProfiler.profile("ComputerUtilCard.applyStaticContPT")) {
+            applyStaticContPTImpl(game, vCard, exclude);
+        } catch (Exception e) {
+            // Profiler exceptions shouldn't affect game logic
+            applyStaticContPTImpl(game, vCard, exclude);
+        }
+    }
+
+    private static void applyStaticContPTImpl(final Game game, Card vCard, final CardCollectionView exclude) {
         if (!vCard.isCreature()) {
             return;
         }

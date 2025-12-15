@@ -6,6 +6,7 @@ import java.util.Map;
 import com.google.common.collect.Iterables;
 
 import forge.ai.*;
+import forge.ai.profile.AiPerformanceProfiler;
 import forge.game.Game;
 import forge.game.GameEntity;
 import forge.game.ability.AbilityUtils;
@@ -44,6 +45,15 @@ public class TokenAi extends SpellAbilityAi {
 
     @Override
     protected boolean checkPhaseRestrictions(final Player ai, final SpellAbility sa, final PhaseHandler ph) {
+        try (AutoCloseable p = AiPerformanceProfiler.profile("TokenAi.checkPhaseRestrictions")) {
+            return checkPhaseRestrictionsImpl(ai, sa, ph);
+        } catch (Exception e) {
+            // Profiler exceptions shouldn't affect game logic
+            return checkPhaseRestrictionsImpl(ai, sa, ph);
+        }
+    }
+
+    private boolean checkPhaseRestrictionsImpl(final Player ai, final SpellAbility sa, final PhaseHandler ph) {
         final Card source = sa.getHostCard();
         // Planeswalker-related flags
         boolean pwMinus = false;
@@ -134,6 +144,15 @@ public class TokenAi extends SpellAbilityAi {
 
     @Override
     protected AiAbilityDecision checkApiLogic(final Player ai, final SpellAbility sa) {
+        try (AutoCloseable p = AiPerformanceProfiler.profile("TokenAi.checkApiLogic")) {
+            return checkApiLogicImpl(ai, sa);
+        } catch (Exception e) {
+            // Profiler exceptions shouldn't affect game logic
+            return checkApiLogicImpl(ai, sa);
+        }
+    }
+
+    private AiAbilityDecision checkApiLogicImpl(final Player ai, final SpellAbility sa) {
         final Game game = ai.getGame();
         final Player opp = ai.getWeakestOpponent();
 
@@ -247,6 +266,15 @@ public class TokenAi extends SpellAbilityAi {
 
     @Override
     protected AiAbilityDecision doTriggerNoCost(Player ai, SpellAbility sa, boolean mandatory) {
+        try (AutoCloseable p = AiPerformanceProfiler.profile("TokenAi.doTriggerNoCost")) {
+            return doTriggerNoCostImpl(ai, sa, mandatory);
+        } catch (Exception e) {
+            // Profiler exceptions shouldn't affect game logic
+            return doTriggerNoCostImpl(ai, sa, mandatory);
+        }
+    }
+
+    private AiAbilityDecision doTriggerNoCostImpl(Player ai, SpellAbility sa, boolean mandatory) {
         Card actualToken = spawnToken(ai, sa);
 
         final TargetRestrictions tgt = sa.getTargetRestrictions();
@@ -350,6 +378,15 @@ public class TokenAi extends SpellAbilityAi {
      * @return token creature created by ability
      */
     public static Card spawnToken(Player ai, SpellAbility sa) {
+        try (AutoCloseable p = AiPerformanceProfiler.profile("TokenAi.spawnToken")) {
+            return spawnTokenImpl(ai, sa);
+        } catch (Exception e) {
+            // Profiler exceptions shouldn't affect game logic
+            return spawnTokenImpl(ai, sa);
+        }
+    }
+
+    private static Card spawnTokenImpl(Player ai, SpellAbility sa) {
         if (!sa.hasParam("TokenScript")) {
             throw new RuntimeException("Spell Ability has no TokenScript: " + sa);
         }
