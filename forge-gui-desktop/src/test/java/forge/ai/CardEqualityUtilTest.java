@@ -157,7 +157,7 @@ public class CardEqualityUtilTest {
         game.getAction().moveTo(ZoneType.Battlefield, card2, null, null);
         
         // Damage one card
-        card1.addDamage(1, card1, null);
+        card1.setDamage(1);
         
         // They should not be equal if they have different damage
         assertFalse(CardEqualityUtil.areFunctionallyEqual(card1, card2));
